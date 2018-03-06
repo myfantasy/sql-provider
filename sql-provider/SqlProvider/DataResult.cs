@@ -8,6 +8,7 @@ namespace System.Data
     public class DataResult
     {
         public List<List<Dictionary<string, object>>> res = new List<List<Dictionary<string, object>>>();
+        public List<List<Tuple<Type, string>>> res_types = new List<List<Tuple<Type, string>>>();
         public Exception se;
         public Exception e;
 

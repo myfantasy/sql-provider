@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <AssemblyName>MyFantasy.SqlProviderExt</AssemblyName>
+    <RootNamespace>MyFantasy.SqlProviderExt</RootNamespace>
+    <PackageId>MyFantasy.SqlProviderExt</PackageId>
+    <Authors>myfantasy.ru</Authors>
+    <Company>myfantasy.ru</Company>
+    <Product>MyFantasy.SqlProviderExt</Product>
+    <Description>SqlConnection easy ext</Description>
+    <Copyright>myfantasy.ru</Copyright>
+    <PackageProjectUrl>https://github.com/myfantasy/sql-provider</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/myfantasy/sql-provider</RepositoryUrl>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>1.0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MyFantasy.SqlProvider" Version="1.0.2" />
+    <PackageReference Include="Npgsql" Version="3.2.7" />
+  </ItemGroup>
+
+</Project>

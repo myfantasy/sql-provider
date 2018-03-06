@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,12 +13,18 @@ namespace System.Data
     /// </summary>
     public static class FieldHandler
     {
+        public enum DbTypes : int
+        {
+            MsSql = 0,
+            PG = 1
+        }
+
         /// <summary>
         /// Конвертирует в строку готовую ко вставке в запрос в качестве параметра
         /// </summary>
         /// <param name="value">Входящее значение</param>
         /// <returns>строка сконвентированная</returns>
-        public static string ConvertValueToDB(object value)
+        public static string ConvertValueToDB(object value, DbTypes dbt = DbTypes.MsSql)
         {
             if (value == null)
             {
@@ -37,13 +44,26 @@ namespace System.Data
             }
             else if (value is byte[])
             {
-                StringBuilder sb = new StringBuilder("0x");
-                foreach (byte b in (byte[])value)
+                if (dbt == DbTypes.PG)
                 {
-                    sb.Append(b.ToString("X2"));
+                    StringBuilder sb = new StringBuilder("E'\\\\x");
+                    foreach (byte b in (byte[])value)
+                    {
+                        sb.Append(b.ToString("X2"));
+                    }
+                    sb.Append("'");
+                    return sb.ToString();
                 }
-                sb.Append("");
-                return sb.ToString();
+                else
+                {
+                    StringBuilder sb = new StringBuilder("0x");
+                    foreach (byte b in (byte[])value)
+                    {
+                        sb.Append(b.ToString("X2"));
+                    }
+                    sb.Append("");
+                    return sb.ToString();
+                }
             }
             else if (value is int)
             {
@@ -85,13 +105,27 @@ namespace System.Data
             }
             else if (value is bool)
             {
-                if (((bool)value))
+                if (dbt == DbTypes.PG)
                 {
-                    return "1";
+                    if (((bool)value))
+                    {
+                        return "true";
+                    }
+                    else
+                    {
+                        return "false";
+                    }
                 }
                 else
                 {
-                    return "0";
+                    if (((bool)value))
+                    {
+                        return "1";
+                    }
+                    else
+                    {
+                        return "0";
+                    }
                 }
             }
             else if (value is double)
@@ -102,27 +136,29 @@ namespace System.Data
             {
                 return ((decimal)value).ToString().Replace(",", ".");
             }
+            if (value is IEnumerable collection)
+            {
+                if (dbt == DbTypes.PG)
+                {
+                    return $"array[{string.Join(",", collection.Cast<object>().Select(x => x.ConvertToDB(dbt)))}]";
+                }
+                else
+                {
+                    return $"values{string.Join(",", collection.Cast<object>().Select(x => "(" + x.ConvertToDB(dbt) + ")"))}";
+                }                    
+            }
             else
             {
                 return "'" + value.ToString() + "'";
             }
         }
 
-        public static string ConvertToDB<T>(this T value)
+        public static string ConvertToDB<T>(this T value, DbTypes dbt = DbTypes.MsSql)
         {
-            return ConvertValueToDB(value);
+            return ConvertValueToDB(value, dbt);
         }
-
-        public static string ConvertToDB<T>(this IEnumerable<T> list, string tableName, Func<T, string> cfti = null)
-        {
-            if (cfti == null)
-            {
-                cfti = ConvertToDB;
-            }
-            return TIdsListAdd(list, tableName, cfti);
-        }
-
-        public static string convert_to_param_list(this Dictionary<string, object> DO, string table_name = "@params", string prefix = "")
+        
+        public static string ConvertToParamsList(this Dictionary<string, object> DO, string table_name = "@params", string prefix = "")
         {
             StringBuilder sb = new StringBuilder("");
             if (DO != null)
@@ -130,7 +166,7 @@ namespace System.Data
                 {
                     if (kvp.Value is Dictionary<string, object>)
                     {
-                        sb.AppendLine((kvp.Value as Dictionary<string, object>).convert_to_param_list(table_name, kvp.Key + "."));
+                        sb.AppendLine((kvp.Value as Dictionary<string, object>).ConvertToParamsList(table_name, kvp.Key + "."));
                     }
                     else if (kvp.Value is List<object>)
                     {
@@ -155,7 +191,7 @@ namespace System.Data
         /// <param name="ids">список Id</param>
         /// <param name="tableName">Имя таблицы</param>
         /// <returns>строку подмены запроса</returns>
-        public static string TIdsListAdd(IEnumerable<long> ids, string tableName)
+        public static string TIdsListAdd(IEnumerable<long> ids, string tableName, DbTypes dbt = DbTypes.MsSql)
         {
             if ((ids != null) && (ids.Count() > 0))
             {
@@ -177,7 +213,7 @@ namespace System.Data
                         res.Append(",");
                     }
                     res.Append("(");
-                    res.Append(FieldHandler.ConvertValueToDB(id));
+                    res.Append(FieldHandler.ConvertValueToDB(id, dbt));
                     res.Append(")");
                     row++;
 
@@ -241,5 +277,28 @@ namespace System.Data
             }
         }
 
+
+        public static string InsertIntoTable(string tableName, List<string> columns, List<Dictionary<string, object>> vals, DbTypes dbt = DbTypes.MsSql)
+        {
+            StringBuilder sb = new StringBuilder("");
+
+            string cols = string.Join(",", columns);
+
+            foreach (var v in vals)
+            {
+                sb.Append("insert into " + tableName + "(" + cols + ") select ");
+                for (int i = 0; i < columns.Count; i++)
+                {
+                    if (i > 0)
+                    {
+                        sb.Append(",");
+                    }
+                    sb.Append(v.GetElement(columns[i]).ConvertToDB(dbt));
+                }
+                sb.AppendLine(";");
+            }
+
+            return sb.ToString();
+        }
     }
 }

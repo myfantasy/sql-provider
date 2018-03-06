@@ -9,11 +9,16 @@
     <Description>SqlConnection easy</Description>
     <PackageProjectUrl>https://github.com/myfantasy/sql-provider</PackageProjectUrl>
     <RepositoryUrl>https://github.com/myfantasy/sql-provider</RepositoryUrl>
+    <Company>myfantasy.ru</Company>
+    <Authors>myfantasy.ru</Authors>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
+    <Version>1.0.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MyFantasy.SystemClasses" Version="1.0.2" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.4.0" />
+    <PackageReference Include="MyFantasy.SystemClasses" Version="1.0.7.1" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.4.2" />
   </ItemGroup>
 
 </Project>
