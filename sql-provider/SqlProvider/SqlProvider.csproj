@@ -11,9 +11,9 @@
     <RepositoryUrl>https://github.com/myfantasy/sql-provider</RepositoryUrl>
     <Company>myfantasy.ru</Company>
     <Authors>myfantasy.ru</Authors>
-    <AssemblyVersion>1.0.2.0</AssemblyVersion>
-    <FileVersion>1.0.2.0</FileVersion>
-    <Version>1.0.2</Version>
+    <AssemblyVersion>1.0.3.0</AssemblyVersion>
+    <FileVersion>1.0.3.0</FileVersion>
+    <Version>1.0.3</Version>
   </PropertyGroup>
 
   <ItemGroup>
