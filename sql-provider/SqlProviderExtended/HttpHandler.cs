@@ -1,6 +1,7 @@
 ﻿using Npgsql;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
@@ -16,6 +17,7 @@ namespace System.Net.Http
     {
 
         public static Dictionary<string, string> McServers = new Dictionary<string, string>();
+        public static Dictionary<string, QueryHandler.ConnStringGroup> McGroups = new Dictionary<string, QueryHandler.ConnStringGroup>();
 
         private static void AddHeaders(this HttpHeaders headersCollection, Dictionary<string, string> addingHeaders)
         {
@@ -35,16 +37,37 @@ namespace System.Net.Http
             }
         }
 
-        public static async Task<Tuple<string, System.Net.HttpStatusCode>> CallNamedService(this string path, string serviceId, Dictionary<string, object> args = null, bool sendJson = true, int timeoutSeconds = 10,
+        public static async Task<Tuple<string, System.Net.HttpStatusCode>> CallService(this string path, string serviceId, string serviceUrl, Dictionary<string, object> args = null, bool sendJson = true, int timeoutSeconds = 10,
             string httpMethod = "POST", Dictionary<string, string> headers = null)
         {
-            var serviceUrl = McServers.GetValueOrDefault(serviceId);
+            if (serviceId == null)
+            {
+                return await CallService(serviceUrl, args, sendJson, timeoutSeconds, httpMethod, headers);
+            }
+            else
+            {
+                return await CallService(path, serviceId, args, sendJson, timeoutSeconds, httpMethod, headers);
+            }
+        }
+
+        public static async Task<Tuple<string, System.Net.HttpStatusCode>> CallService(this string path, string serviceId, Dictionary<string, object> args = null, bool sendJson = true, int timeoutSeconds = 10,
+            string httpMethod = "POST", Dictionary<string, string> headers = null)
+        {
+            TryGetMcServers(serviceId, out var serviceUrl, out var element);
+            
             if (serviceUrl == null)
             {
                 return new Tuple<string, HttpStatusCode>($"Не найден service_id = {serviceId}", HttpStatusCode.BadRequest);
             }
 
-            return await CallService(serviceUrl + path, args, sendJson, timeoutSeconds, httpMethod, headers);
+            var res = await CallService(serviceUrl + path, args, sendJson, timeoutSeconds, httpMethod, headers);
+
+            if ((int)res.Item2 >= 400 && (int)res.Item2 < 409 || (int)res.Item2 >= 500)
+            {
+                element.SetFail();
+            }
+
+            return res;
         }
 
         public static async Task<Tuple<string, HttpStatusCode>> CallService(string serviceUrl, Dictionary<string, object> args = null, bool sendJson = true, int timeoutSeconds = 10,
@@ -95,16 +118,37 @@ namespace System.Net.Http
         }
 
 
-        public static async Task<Tuple<string, System.Net.HttpStatusCode>> CallNamedServiceGet(this string path, string serviceId, Dictionary<string, object> args = null, int timeoutSeconds = 10,
+        public static async Task<Tuple<string, System.Net.HttpStatusCode>> CallServiceGet(this string path, string serviceId, string serviceUrl, Dictionary<string, object> args = null, int timeoutSeconds = 10,
             Dictionary<string, string> headers = null)
         {
-            var serviceUrl = McServers.GetValueOrDefault(serviceId);
+            if (serviceId == null)
+            {
+                return await CallServiceGet(serviceUrl, args, timeoutSeconds, headers);
+            }
+            else
+            {
+                return await CallServiceGet(path, serviceId, args, timeoutSeconds, headers);
+            }
+        }
+
+        public static async Task<Tuple<string, System.Net.HttpStatusCode>> CallServiceGet(this string path, string serviceId, Dictionary<string, object> args = null, int timeoutSeconds = 10,
+            Dictionary<string, string> headers = null)
+        {
+            TryGetMcServers(serviceId, out var serviceUrl, out var element);
+
             if (serviceUrl == null)
             {
                 return new Tuple<string, HttpStatusCode>($"Не найден service_id = {serviceId}", HttpStatusCode.BadRequest);
             }
 
-            return await CallServiceGet(serviceUrl + path, args, timeoutSeconds, headers);
+            var res = await CallServiceGet(serviceUrl + path, args, timeoutSeconds, headers);
+
+            if ((int)res.Item2 >= 400 && (int)res.Item2 < 409 || (int)res.Item2 >= 500)
+            {
+                element.SetFail();
+            }
+
+            return res;
         }
 
         public static async Task<Tuple<string, HttpStatusCode>> CallServiceGet(string serviceUrl, Dictionary<string, object> args = null, int timeoutSeconds = 10,
@@ -144,6 +188,24 @@ namespace System.Net.Http
             }
         }
 
+
+        public static void TryGetMcServers(string serviceId, out string serviceUrl, out QueryHandler.ConnStringElement element)
+        {
+            if (McServers.TryGetValue(serviceId, out serviceUrl))
+            {
+                element = null;
+                return;
+            }
+            if (McGroups.TryGetValue(serviceId, out var group))
+            {
+                element = group.GetConnString();
+                serviceUrl = element?.ConnString;
+                return;
+            }
+
+            serviceUrl = null;
+            element = null;
+        }
     }
 }
 

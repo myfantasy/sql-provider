@@ -18,19 +18,89 @@ namespace System.Data
             Linq.Linq.OnErrorExecute(ex);
         }
 
-        public static Dictionary<string, string> ConnStrings = new Dictionary<string, string>();
+        public class ConnStringElement
+        {
+            public string ConnString;
+            public long Priority;
+            public TimeSpan SleepOnFail = new TimeSpan(0, 0, 0);
+            public DateTime NotUseFor = DateTime.Now;
 
+            public void SetFail()
+            {
+                NotUseFor = DateTime.Now + SleepOnFail;
+            }
+        }
+        public class ConnStringGroup
+        {
+            public List<ConnStringElement> Connects;
+            public ConnStringElement GetConnString()
+            {
+                return Connects.Where(f => f.NotUseFor <= DateTime.Now).OrderBy(f => f.Priority).FirstOrDefault();
+            }
+
+            /// <summary>
+            /// Создание нового подключения
+            /// </summary>
+            /// <param name="lo">List of Dictionary of string-object  values: (string)conn_string, (long)priority, (int)fail_timeout [in seconds]</param>
+            /// <returns></returns>
+            public static ConnStringGroup Create(List<object> lo)
+            {
+                var csg = new ConnStringGroup();
+                csg.Connects = lo?.Select(f => new ConnStringElement()
+                {
+                    ConnString = f.GetElement_DO<string>("conn_string"),
+                    Priority = f.GetElement_DO<long>("priority"),
+                    SleepOnFail = new TimeSpan(0, 0, (int)f.GetElement_DO<long>("fail_timeout"))
+                }).ToList() ?? new List<ConnStringElement>();
+
+                return csg;
+            }
+        }
+
+        public static Dictionary<string, string> ConnStrings = new Dictionary<string, string>();
+        public static Dictionary<string, ConnStringGroup> ConnGroups = new Dictionary<string, ConnStringGroup>();
+
+        public static bool Execute(this string query, string csName, string connectionString, out DataResult result
+            , int timeout = 10, int error1205LevelHanle = 10)
+        {
+            if (csName == null)
+            {
+                return query.Execute(out result, connectionString, timeout, error1205LevelHanle);                
+            }
+            else
+            {
+                return query.Execute(csName, out result, timeout, error1205LevelHanle);
+            }
+        }
         public static bool Execute(this string query, string csName, out DataResult result
             , int timeout = 10, int error1205LevelHanle = 10)
         {
-            return query.Execute(out result, ConnStrings[csName], timeout, error1205LevelHanle);
+            TryGetConnString(csName, out var connectionString, out var element);
+
+            var res = query.Execute(out result, connectionString, timeout, error1205LevelHanle);
+
+            if (!res)
+            {
+                element?.SetFail();
+            }
+
+            return res;
         }
 
         public static bool Execute(this string query, string csName
             , int timeout = 10, int error1205LevelHanle = 10)
         {
             DataResult result;
-            return query.Execute(out result, ConnStrings[csName], timeout, error1205LevelHanle);
+            TryGetConnString(csName, out var connectionString, out var element);
+
+            var res = query.Execute(out result, connectionString, timeout, error1205LevelHanle);
+
+            if (!res)
+            {
+                element?.SetFail();
+            }
+
+            return res;
         }
 
         public static bool Execute(this string query, out DataResult result, string connectionString
@@ -116,7 +186,31 @@ namespace System.Data
             , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func
             , int timeout = 3600, int error1205LevelHanle = 10)
         {
-            return query.Execute_Step(out result, ConnStrings[csName], batch_limit, func, timeout, error1205LevelHanle);
+
+            TryGetConnString(csName, out var connectionString, out var element);
+
+            var res = query.Execute_Step(out result, connectionString, batch_limit, func, timeout, error1205LevelHanle);
+
+            if (!res)
+            {
+                element?.SetFail();
+            }
+
+            return res;
+        }
+
+        public static bool Execute_Step(this string query, string csName, string connectionString, out DataResult result, int batch_limit
+            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func
+            , int timeout = 3600, int error1205LevelHanle = 10)
+        {
+            if (csName == null)
+            {
+                return query.Execute_Step(out result, connectionString, batch_limit, func, timeout, error1205LevelHanle);
+            }
+            else
+            {
+                return query.Execute_Step(csName, out result, batch_limit, func, timeout, error1205LevelHanle);
+            }
         }
 
         public static bool Execute_Step(this string query, string csName, int batch_limit
@@ -124,7 +218,16 @@ namespace System.Data
             , int timeout = 3600, int error1205LevelHanle = 10)
         {
             DataResult result;
-            return query.Execute_Step(out result, ConnStrings[csName], batch_limit, func, timeout, error1205LevelHanle);
+            TryGetConnString(csName, out var connectionString, out var element);
+
+            var res = query.Execute_Step(out result, connectionString, batch_limit, func, timeout, error1205LevelHanle);
+
+            if (!res)
+            {
+                element?.SetFail();
+            }
+
+            return res;
         }
         public static bool Execute_Step(this string query, out DataResult result, string connectionString, int batch_limit
             , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func
@@ -231,17 +334,46 @@ namespace System.Data
 
 
 
-
+        public static bool Execute_Bulk(this string table_name, string csName, string connectionString, out DataResult result, List<Tuple<Type, string>> columns, List<Dictionary<string, object>> data
+            , int timeout = 3600, int error1205LevelHanle = 10)
+        {
+            if (csName == null)
+            {
+                return table_name.Execute_Bulk(out result, connectionString, columns, data, timeout, error1205LevelHanle);
+            }
+            else
+            {
+                return table_name.Execute_Bulk(csName, out result, columns, data, timeout, error1205LevelHanle);
+            }            
+        }
         public static bool Execute_Bulk(this string table_name, string csName, out DataResult result, List<Tuple<Type, string>> columns, List<Dictionary<string, object>> data
             , int timeout = 3600, int error1205LevelHanle = 10)
         {
-            return table_name.Execute_Bulk(out result, ConnStrings[csName], columns, data, timeout, error1205LevelHanle);
+            TryGetConnString(csName, out var connectionString, out var element);
+
+            var res = table_name.Execute_Bulk(out result, connectionString, columns, data, timeout, error1205LevelHanle);
+
+            if (!res)
+            {
+                element?.SetFail();
+            }
+
+            return res;
         }
         public static bool Execute_Bulk(this string table_name, string csName, List<Tuple<Type, string>> columns, List<Dictionary<string, object>> data
             , int timeout = 3600, int error1205LevelHanle = 10)
         {
             DataResult result;
-            return table_name.Execute_Bulk(out result, ConnStrings[csName], columns, data, timeout, error1205LevelHanle);
+            TryGetConnString(csName, out var connectionString, out var element);
+
+            var res = table_name.Execute_Bulk(out result, connectionString, columns, data, timeout, error1205LevelHanle);
+
+            if (!res)
+            {
+                element?.SetFail();
+            }
+
+            return res;
         }
         public static bool Execute_Bulk(this string table_name, out DataResult result, string connectionString, List<Tuple<Type, string>> columns, List<Dictionary<string, object>> data
             , int timeout = 3600, int error1205LevelHanle = 10)
@@ -314,6 +446,25 @@ namespace System.Data
             } while (error1205 && error1205LevelHanle >= 0);
 
             return res;
+        }
+
+
+        public static void TryGetConnString(string csName, out string connectionString, out ConnStringElement element)
+        {
+            if (ConnStrings.TryGetValue(csName, out connectionString))
+            {
+                element = null;
+                return;
+            }
+            if (ConnGroups.TryGetValue(csName, out var group))
+            {
+                element = group.GetConnString();
+                connectionString = element?.ConnString;
+                return;
+            }
+
+            connectionString = null;
+            element = null;
         }
     }
 }

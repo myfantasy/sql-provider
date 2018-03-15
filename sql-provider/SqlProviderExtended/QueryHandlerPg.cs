@@ -17,18 +17,50 @@ namespace System.Data
         public static int MAX_READ_TRY_COUNT = 2;
 
         public static Dictionary<string, string> ConnStrings = new Dictionary<string, string>();
+        public static Dictionary<string, QueryHandler.ConnStringGroup> ConnGroups = new Dictionary<string, QueryHandler.ConnStringGroup>();
+
+        public static bool ExecutePg(this string query, string csName, string connectionString, out DataResult result
+            , int timeout = 10)
+        {
+            if (csName == null)
+            {
+                return query.ExecutePg(out result, connectionString, timeout);
+            }
+            else
+            {
+                return query.ExecutePg(csName, out result, timeout);
+            }
+        }
 
         public static bool ExecutePg(this string query, string csName, out DataResult result
             , int timeout = 10)
         {
-            return query.ExecutePg(out result, ConnStrings[csName], timeout);
+            TryGetConnString(csName, out var connectionString, out var element);
+
+            var res = query.ExecutePg(out result, connectionString, timeout);
+
+            if (!res)
+            {
+                element?.SetFail();
+            }
+
+            return res;
         }
 
         public static bool ExecutePg(this string query, string csName
             , int timeout = 10)
         {
             DataResult result;
-            return query.ExecutePg(out result, ConnStrings[csName], timeout);
+            TryGetConnString(csName, out var connectionString, out var element);
+
+            var res = query.ExecutePg(out result, connectionString, timeout);
+
+            if (!res)
+            {
+                element?.SetFail();
+            }
+
+            return res;
         }
 
         public static bool ExecutePg(this string query, out DataResult result, string connectionString, int timeout = 30)
@@ -40,6 +72,14 @@ namespace System.Data
                 using (var conn = new Npgsql.NpgsqlConnection(connectionString))
                 {
                     conn.Open();
+
+                    using (var cmd = new Npgsql.NpgsqlCommand())
+                    {
+                        cmd.Connection = conn;
+                        cmd.CommandText = "SET statement_timeout = " + timeout.ToString() + "000;";
+                        cmd.ExecuteNonQuery();
+                    }
+
                     using (var cmd = new Npgsql.NpgsqlCommand())
                     {
                         cmd.Connection = conn;
@@ -98,11 +138,33 @@ namespace System.Data
             return false;
         }
 
+        public static bool ExecutePg_Step(this string query, string csName, string connectionString, out DataResult result, int batch_limit
+            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func
+            , int timeout = 3600)
+        {
+            if (csName == null)
+            {
+                return query.ExecutePg_Step(out result, connectionString, batch_limit, func, timeout);
+            }
+            else
+            {
+                return query.ExecutePg_Step(csName, out result, batch_limit, func, timeout);
+            }
+        }
         public static bool ExecutePg_Step(this string query, string csName, out DataResult result, int batch_limit
             , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func
             , int timeout = 3600)
         {
-            return query.ExecutePg_Step(out result, ConnStrings[csName], batch_limit, func, timeout);
+            TryGetConnString(csName, out var connectionString, out var element);
+
+            var res = query.ExecutePg_Step(out result, connectionString, batch_limit, func, timeout);
+
+            if (!res)
+            {
+                element?.SetFail();
+            }
+
+            return res;
         }
 
         public static bool ExecutePg_Step(this string query, string csName, int batch_limit
@@ -110,7 +172,16 @@ namespace System.Data
             , int timeout = 3600)
         {
             DataResult result;
-            return query.ExecutePg_Step(out result, ConnStrings[csName], batch_limit, func, timeout);
+            TryGetConnString(csName, out var connectionString, out var element);
+
+            var res = query.ExecutePg_Step(out result, connectionString, batch_limit, func, timeout);
+
+            if (!res)
+            {
+                element?.SetFail();
+            }
+
+            return res;
         }
         public static bool ExecutePg_Step(this string query, out DataResult result, string connectionString, int batch_limit
             , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func, int timeout = 3600)
@@ -122,6 +193,14 @@ namespace System.Data
                 using (var conn = new Npgsql.NpgsqlConnection(connectionString))
                 {
                     conn.Open();
+
+                    using (var cmd = new Npgsql.NpgsqlCommand())
+                    {
+                        cmd.Connection = conn;
+                        cmd.CommandText = "SET statement_timeout = " + timeout.ToString() + "000;";
+                        cmd.ExecuteNonQuery();
+                    }
+
                     using (var cmd = new Npgsql.NpgsqlCommand())
                     {
                         cmd.Connection = conn;
@@ -299,7 +378,17 @@ namespace System.Data
 
         public static Exception CopyCN(string sourceQuery, string destinationTableName, string sourceConnectionName, string destinationConnectionName, int timeoutMilliseconds = 100)
         {
-            return Copy(sourceQuery, destinationTableName, ConnStrings[sourceConnectionName], ConnStrings[destinationConnectionName], timeoutMilliseconds);
+            TryGetConnString(sourceConnectionName, out var sourceConnectionString, out var elementSource);
+            TryGetConnString(destinationConnectionName, out var destinationConnectionString, out var elementDestination);
+
+            var res = Copy(sourceQuery, destinationTableName, sourceConnectionName, destinationConnectionName, timeoutMilliseconds);
+            if (res != null)
+            {
+                elementSource?.SetFail();
+                elementDestination?.SetFail();
+            }
+
+            return res;
         }
         public static Exception Copy(string sourceQuery, string destinationTableName, string sourceConnectionString, string destinationConnectionString, int timeoutMilliseconds = 100)
         {
@@ -344,17 +433,57 @@ namespace System.Data
             }
         }
 
-        public static Exception Copy(List<Dictionary<string, object>> datas, List<Tuple<Type,string>> fieldNames, string destinationTableName, string destinationConnectionName)
+        public static Exception Copy(List<Dictionary<string, object>> datas, List<Tuple<Type,string>> fieldNames, string destinationTableName, string destinationConnectionName, string destinationConnectionString)
         {
-            return Copy(ConnStrings[destinationConnectionName], datas, fieldNames, destinationTableName);
+            if (destinationConnectionName == null)
+            {
+                return Copy(destinationConnectionString, datas, fieldNames, destinationTableName);
+            }
+            else
+            {
+                return Copy(datas, fieldNames, destinationTableName, destinationConnectionName);
+            }
+        }
+        public static Exception Copy(List<Dictionary<string, object>> datas, List<Tuple<Type, string>> fieldNames, string destinationTableName, string destinationConnectionName)
+        {
+            TryGetConnString(destinationConnectionName, out var destinationConnectionString, out var element);
+
+            var res = Copy(destinationConnectionString, datas, fieldNames, destinationTableName);
+
+            if (res != null)
+            {
+                element?.SetFail();
+            }
+
+            return res;
         }
         public static Exception Copy(string destinationConnectionString, List<Dictionary<string, object>> datas, List<Tuple<Type, string>> fieldNames, string destinationTableName)
         {
             return Copy(destinationConnectionString, datas, fieldNames.Select(f=>f.Item2).ToList(), destinationTableName);
         }
-            public static Exception Copy(IList<Dictionary<string, object>> datas, IList<string> fieldNames, string destinationTableName, string destinationConnectionName)
+        public static Exception Copy(IList<Dictionary<string, object>> datas, IList<string> fieldNames, string destinationTableName, string destinationConnectionName, string destinationConnectionString)
         {
-            return Copy(ConnStrings[destinationConnectionName], datas, fieldNames, destinationTableName);
+            if (destinationConnectionName == null)
+            {
+                return Copy(destinationConnectionString, datas, fieldNames, destinationTableName);
+            }
+            else
+            {
+                return Copy(datas, fieldNames, destinationTableName, destinationConnectionName);
+            }
+        }
+        public static Exception Copy(IList<Dictionary<string, object>> datas, IList<string> fieldNames, string destinationTableName, string destinationConnectionName)
+        {
+            TryGetConnString(destinationConnectionName, out var destinationConnectionString, out var element);
+
+            var res = Copy(destinationConnectionString, datas, fieldNames, destinationTableName);
+
+            if (res != null)
+            {
+                element?.SetFail();
+            }
+
+            return res;
         }
         public static Exception Copy(string destinationConnectionString, IList<Dictionary<string, object>> datas, IList<string> fieldNames, string destinationTableName)
         {
@@ -395,6 +524,24 @@ namespace System.Data
                 QueryHandler.OnErrorExecute(exception);
                 return exception;
             }
+        }
+
+        public static void TryGetConnString(string csName, out string connectionString, out QueryHandler.ConnStringElement element)
+        {
+            if (ConnStrings.TryGetValue(csName, out connectionString))
+            {
+                element = null;
+                return;
+            }
+            if (ConnGroups.TryGetValue(csName, out var group))
+            {
+                element = group.GetConnString();
+                connectionString = element?.ConnString;
+                return;
+            }
+
+            connectionString = null;
+            element = null;
         }
     }
 }

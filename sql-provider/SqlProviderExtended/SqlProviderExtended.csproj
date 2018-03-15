@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>MyFantasy.SqlProviderExt</AssemblyName>
     <RootNamespace>MyFantasy.SqlProviderExt</RootNamespace>
     <PackageId>MyFantasy.SqlProviderExt</PackageId>
@@ -13,12 +13,21 @@
     <PackageProjectUrl>https://github.com/myfantasy/sql-provider</PackageProjectUrl>
     <RepositoryUrl>https://github.com/myfantasy/sql-provider</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.0.1.1</Version>
+    <Version>1.0.1.6</Version>
+    <AssemblyVersion>1.0.1.6</AssemblyVersion>
+    <FileVersion>1.0.1.6</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MyFantasy.SqlProvider" Version="1.0.3" />
     <PackageReference Include="Npgsql" Version="3.2.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SqlProvider\SqlProvider.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Properties\PublishProfiles\" />
   </ItemGroup>
 
 </Project>
