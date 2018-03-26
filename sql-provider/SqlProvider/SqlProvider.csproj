@@ -11,14 +11,14 @@
     <RepositoryUrl>https://github.com/myfantasy/sql-provider</RepositoryUrl>
     <Company>myfantasy.ru</Company>
     <Authors>myfantasy.ru</Authors>
-    <AssemblyVersion>1.0.3.4</AssemblyVersion>
-    <FileVersion>1.0.3.4</FileVersion>
-    <Version>1.0.3.4</Version>
+    <AssemblyVersion>1.0.3.5</AssemblyVersion>
+    <FileVersion>1.0.3.5</FileVersion>
+    <Version>1.0.3.5</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MyFantasy.SystemClasses" Version="1.0.7.2" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.4.2" />
+    <PackageReference Include="MyFantasy.SystemClasses" Version="1.0.7.4" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.4.3" />
   </ItemGroup>
 
   <ItemGroup>
