@@ -396,7 +396,7 @@ namespace System.Data
                     DataRow row = dt.NewRow();
                     for (int i = 0; i < columns.Count; i++)
                     {
-                        row[columns[i].Item2] = data[j].GetElement(columns[i].Item2);
+                        row[columns[i].Item2] = data[j].GetElement(columns[i].Item2) ?? DBNull.Value;
                     }
                     dt.Rows.Add(row);
                 }
