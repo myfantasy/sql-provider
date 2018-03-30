@@ -139,7 +139,7 @@ namespace System.Data
         }
 
         public static bool ExecutePg_Step(this string query, string csName, string connectionString, out DataResult result, int batch_limit
-            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func
+            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, Tuple<bool, Exception>> func
             , int timeout = 3600)
         {
             if (csName == null)
@@ -152,7 +152,7 @@ namespace System.Data
             }
         }
         public static bool ExecutePg_Step(this string query, string csName, out DataResult result, int batch_limit
-            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func
+            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, Tuple<bool, Exception>> func
             , int timeout = 3600)
         {
             TryGetConnString(csName, out var connectionString, out var element);
@@ -168,7 +168,7 @@ namespace System.Data
         }
 
         public static bool ExecutePg_Step(this string query, string csName, int batch_limit
-            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func
+            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, Tuple<bool, Exception>> func
             , int timeout = 3600)
         {
             DataResult result;
@@ -184,7 +184,7 @@ namespace System.Data
             return res;
         }
         public static bool ExecutePg_Step(this string query, out DataResult result, string connectionString, int batch_limit
-            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func, int timeout = 3600)
+            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, Tuple<bool, Exception>> func, int timeout = 3600)
         {
 
             result = new DataResult();
@@ -235,9 +235,10 @@ namespace System.Data
 
                                     if (lr.Count > batch_limit)
                                     {
-                                        if (!func(ft, lr))
+                                        var f_wr = func(ft, lr);
+                                        if (!f_wr.Item1)
                                         {
-                                            Exception ex = new Exception("function faild in ExecutePg_Step");
+                                            Exception ex = new Exception("function faild in ExecutePg_Step\r\n" + f_wr.Item2.Message, f_wr.Item2);
                                             result.e = ex;
                                             QueryHandler.OnErrorExecute(ex);
                                             return false;
@@ -247,9 +248,10 @@ namespace System.Data
                                 }
                                 if (lr.Count > 0)
                                 {
-                                    if (!func(ft, lr))
+                                    var f_wr = func(ft, lr);
+                                    if (!f_wr.Item1)
                                     {
-                                        Exception ex = new Exception("function faild in ExecutePg_Step");
+                                        Exception ex = new Exception("function faild in ExecutePg_Step\r\n" + f_wr.Item2.Message, f_wr.Item2);
                                         result.e = ex;
                                         QueryHandler.OnErrorExecute(ex);
                                         return false;

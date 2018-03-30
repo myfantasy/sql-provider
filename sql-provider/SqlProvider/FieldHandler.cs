@@ -19,6 +19,7 @@ namespace System.Data
             PG = 1
         }
 
+
         /// <summary>
         /// Конвертирует в строку готовую ко вставке в запрос в качестве параметра
         /// </summary>
@@ -157,7 +158,12 @@ namespace System.Data
         {
             return ConvertValueToDB(value, dbt);
         }
-        
+
+        public static string ConvertToDBPg<T>(this T value)
+        {
+            return ConvertValueToDB(value, DbTypes.PG);
+        }
+
         public static string ConvertToParamsList(this Dictionary<string, object> DO, string table_name = "@params", string prefix = "")
         {
             StringBuilder sb = new StringBuilder("");

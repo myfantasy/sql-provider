@@ -183,7 +183,7 @@ namespace System.Data
         }
 
         public static bool Execute_Step(this string query, string csName, out DataResult result, int batch_limit
-            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func
+            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, Tuple<bool, Exception>> func
             , int timeout = 3600, int error1205LevelHanle = 10)
         {
 
@@ -200,7 +200,7 @@ namespace System.Data
         }
 
         public static bool Execute_Step(this string query, string csName, string connectionString, out DataResult result, int batch_limit
-            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func
+            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, Tuple<bool, Exception>> func
             , int timeout = 3600, int error1205LevelHanle = 10)
         {
             if (csName == null)
@@ -214,7 +214,7 @@ namespace System.Data
         }
 
         public static bool Execute_Step(this string query, string csName, int batch_limit
-            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func
+            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, Tuple<bool, Exception>> func
             , int timeout = 3600, int error1205LevelHanle = 10)
         {
             DataResult result;
@@ -230,7 +230,7 @@ namespace System.Data
             return res;
         }
         public static bool Execute_Step(this string query, out DataResult result, string connectionString, int batch_limit
-            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, bool> func
+            , Func<List<Tuple<Type, string>>, List<Dictionary<string, object>>, Tuple<bool, Exception>> func
             , int timeout = 3600, int error1205LevelHanle = 10)
         {
             bool res = false;
@@ -279,9 +279,10 @@ namespace System.Data
 
                                         if (lr.Count >= batch_limit)
                                         {
-                                            if (!func(ft, lr))
+                                            var f_wr = func(ft, lr);
+                                            if (!f_wr.Item1)
                                             {
-                                                Exception ex = new Exception("function faild in Execute_Step");
+                                                Exception ex = new Exception("function faild in Execute_Step\r\n" + f_wr.Item2.Message, f_wr.Item2);
                                                 result.e = ex;
                                                 OnErrorExecute(ex);
                                                 return false;
@@ -291,9 +292,10 @@ namespace System.Data
                                     }
                                     if (lr.Count > 0)
                                     {
-                                        if (!func(ft, lr))
+                                        var f_wr = func(ft, lr);
+                                        if (!f_wr.Item1)
                                         {
-                                            Exception ex = new Exception("function faild in Execute_Step");
+                                            Exception ex = new Exception("function faild in Execute_Step\r\n" + f_wr.Item2.Message, f_wr.Item2);
                                             result.e = ex;
                                             OnErrorExecute(ex);
                                             return false;
