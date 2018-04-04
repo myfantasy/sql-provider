@@ -70,13 +70,30 @@ namespace System.Net.Http
             return res;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="serviceUrl"></param>
+        /// <param name="args">Важно, что Если аргумент содержит ключ "" (Пустая строка) то отправится значение только из него</param>
+        /// <param name="sendJson"></param>
+        /// <param name="timeoutSeconds"></param>
+        /// <param name="httpMethod"></param>
+        /// <param name="headers"></param>
+        /// <returns></returns>
         public static async Task<Tuple<string, HttpStatusCode>> CallService(string serviceUrl, Dictionary<string, object> args = null, bool sendJson = true, int timeoutSeconds = 10,
             string httpMethod = "POST", Dictionary<string, string> headers = null)
         {
             StringContent content;
             if (sendJson)
             {
-                content = new StringContent(args.TryGetJson());
+                if (args.ContainsKey(""))
+                {
+                    content = new StringContent(args[""].TryGetJson());
+                }
+                else
+                {
+                    content = new StringContent(args.TryGetJson());
+                }
             }
             else
             {
