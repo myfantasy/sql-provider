@@ -13,17 +13,13 @@
     <PackageProjectUrl>https://github.com/myfantasy/sql-provider</PackageProjectUrl>
     <RepositoryUrl>https://github.com/myfantasy/sql-provider</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.0.1.10</Version>
-    <AssemblyVersion>1.0.1.10</AssemblyVersion>
-    <FileVersion>1.0.1.10</FileVersion>
+    <Version>1.0.1.12</Version>
+    <AssemblyVersion>1.0.1.12</AssemblyVersion>
+    <FileVersion>1.0.1.12</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Npgsql" Version="3.2.7" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\SqlProvider\SqlProvider.csproj" />
   </ItemGroup>
 
   <ItemGroup>

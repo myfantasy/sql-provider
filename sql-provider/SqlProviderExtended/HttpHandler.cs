@@ -64,7 +64,7 @@ namespace System.Net.Http
 
             if ((int)res.Item2 >= 400 && (int)res.Item2 < 409 || (int)res.Item2 >= 500)
             {
-                element.SetFail();
+                element?.SetFail();
             }
 
             return res;
@@ -84,43 +84,52 @@ namespace System.Net.Http
             string httpMethod = "POST", Dictionary<string, string> headers = null)
         {
             StringContent content;
-            if (sendJson)
-            {
-                if (args.ContainsKey(""))
+            HttpClient client;
+            try
+            {                
+                if (sendJson)
                 {
-                    content = new StringContent(args[""].TryGetJson());
+                    if (args.ContainsKey(""))
+                    {
+                        content = new StringContent(args[""].TryGetJson());
+                    }
+                    else
+                    {
+                        content = new StringContent(args.TryGetJson());
+                    }
                 }
                 else
                 {
-                    content = new StringContent(args.TryGetJson());
+                    var argsText = args?.Count > 0
+                        ? string.Join("&", args.Select(x => $"{x.Key}={x.Value?.ToString()}"))
+                        : "";
+
+                    content = new StringContent(argsText);
                 }
+                
+                content.Headers.Remove("content-type");
+                if (sendJson)
+                {
+                    content.Headers.Add("content-type", "application/json");
+                }
+                else
+                {
+                    content.Headers.Add("content-type", "application/x-www-form-urlencoded");
+                }
+                                
+                client = new HttpClient();
+                client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+                client.DefaultRequestHeaders.AddHeaders(headers);
             }
-            else
+            catch (Exception e)
             {
-                var argsText = args?.Count > 0
-                    ? string.Join("&", args.Select(x => $"{x.Key}={x.Value?.ToString()}"))
-                    : "";
-
-                content = new StringContent(argsText);
+                return new Tuple<string, HttpStatusCode>(e.Message, HttpStatusCode.ServiceUnavailable);
             }
-            string result = null;
-            content.Headers.Remove("content-type");
-            if (sendJson)
-            {
-                content.Headers.Add("content-type", "application/json");
-            }
-            else
-            {
-                content.Headers.Add("content-type", "application/x-www-form-urlencoded");
-            }
-
-            var hsc = HttpStatusCode.NotFound;
-            var client = new HttpClient();
-            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
-            client.DefaultRequestHeaders.AddHeaders(headers);
-
             try
             {
+                var hsc = HttpStatusCode.NotFound;
+                string result = null;
+
                 var request = new HttpRequestMessage(new HttpMethod(httpMethod), serviceUrl) { Content = content };
                 var q1 = await client.SendAsync(request);
 
