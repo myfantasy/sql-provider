@@ -116,10 +116,7 @@ namespace System.Net.Http
                 {
                     content.Headers.Add("content-type", "application/x-www-form-urlencoded");
                 }
-                                
-                client = new HttpClient();
-                client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
-                client.DefaultRequestHeaders.AddHeaders(headers);
+                
             }
             catch (Exception e)
             {
@@ -127,20 +124,33 @@ namespace System.Net.Http
             }
             try
             {
-                var hsc = HttpStatusCode.NotFound;
-                string result = null;
+                using (client = new HttpClient())
+                {
+                    client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+                    client.DefaultRequestHeaders.AddHeaders(headers);
 
-                var request = new HttpRequestMessage(new HttpMethod(httpMethod), serviceUrl) { Content = content };
-                var q1 = await client.SendAsync(request);
+                    var hsc = HttpStatusCode.NotFound;
+                    string result = null;
 
-                result = await q1.Content.ReadAsStringAsync();
-                hsc = q1.StatusCode;
-                return new Tuple<string, HttpStatusCode>(result, hsc);
+                    using (var request = new HttpRequestMessage(new HttpMethod(httpMethod), serviceUrl) { Content = content })
+                    {                       
+                        var q1 = await client.SendAsync(request);
+
+                        result = await q1.Content.ReadAsStringAsync();
+                        hsc = q1.StatusCode;
+
+                        return new Tuple<string, HttpStatusCode>(result, hsc);
+                    }
+                }
             }
             catch (Exception e)
             {
                 return new Tuple<string, HttpStatusCode>(e.Message, HttpStatusCode.ServiceUnavailable);
-            }            
+            }
+            finally
+            {
+                content?.Dispose();
+            }
         }
 
 
@@ -171,7 +181,7 @@ namespace System.Net.Http
 
             if ((int)res.Item2 >= 400 && (int)res.Item2 < 409 || (int)res.Item2 >= 500)
             {
-                element.SetFail();
+                element?.SetFail();
             }
 
             return res;
@@ -196,17 +206,22 @@ namespace System.Net.Http
 
             string result = null;
             HttpStatusCode hsc = HttpStatusCode.NotFound;
-            HttpClient client = new HttpClient();
-            client.Timeout = new TimeSpan(0, 0, timeoutSeconds);
-            client.DefaultRequestHeaders.AddHeaders(headers);
+            
 
             try
             {
-                var q1 = await client.GetAsync(serviceUrl);
+                using (HttpClient client = new HttpClient())
+                {
+                    client.Timeout = new TimeSpan(0, 0, timeoutSeconds);
+                    client.DefaultRequestHeaders.AddHeaders(headers);
+                    using (var q1 = await client.GetAsync(serviceUrl))
+                    {
 
-                result = await q1.Content.ReadAsStringAsync();
-                hsc = q1.StatusCode;
-                return new Tuple<string, HttpStatusCode>(result, hsc);
+                        result = await q1.Content.ReadAsStringAsync();
+                        hsc = q1.StatusCode;
+                        return new Tuple<string, HttpStatusCode>(result, hsc);
+                    }
+                }
             }
             catch (Exception e)
             {

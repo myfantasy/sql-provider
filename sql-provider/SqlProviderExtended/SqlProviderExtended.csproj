@@ -13,9 +13,9 @@
     <PackageProjectUrl>https://github.com/myfantasy/sql-provider</PackageProjectUrl>
     <RepositoryUrl>https://github.com/myfantasy/sql-provider</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.0.1.12</Version>
-    <AssemblyVersion>1.0.1.12</AssemblyVersion>
-    <FileVersion>1.0.1.12</FileVersion>
+    <Version>1.0.1.14</Version>
+    <AssemblyVersion>1.0.1.14</AssemblyVersion>
+    <FileVersion>1.0.1.14</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +24,10 @@
 
   <ItemGroup>
     <Folder Include="Properties\PublishProfiles\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SqlProvider\SqlProvider.csproj" />
   </ItemGroup>
 
 </Project>
